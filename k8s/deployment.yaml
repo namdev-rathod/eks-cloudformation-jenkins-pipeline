@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: 666930281169.dkr.ecr.ap-south-1.amazonaws.com/devops:v1-1  # image will change via Jenkins
+        image: 666930281169.dkr.ecr.ap-south-1.amazonaws.com/devops:dev-1  # image will change via Jenkins
         ports:
         - containerPort: 80
 ---
