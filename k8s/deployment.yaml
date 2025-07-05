@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 666930281169.dkr.ecr.ap-south-1.amazonaws.com/devops:dev-1  # Will be updated by Jenkins
+          image: 666930281169.dkr.ecr.ap-south-1.amazonaws.com/devops:dev-1  # Updated by Jenkins
           ports:
             - containerPort: 80
 ---
@@ -42,7 +42,9 @@ metadata:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}, {"HTTP": 80}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-south-1:666930281169:certificate/19244db9-f4ad-4af8-bd90-6ffb94a11296
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
     alb.ingress.kubernetes.io/group.name: devops-group
 spec:
   ingressClassName: alb
