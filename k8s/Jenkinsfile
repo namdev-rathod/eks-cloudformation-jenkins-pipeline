@@ -1,0 +1,105 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'BRANCH_NAME', defaultValue: 'main', description: 'Enter the Git branch to build')
+        string(name: 'ECR_REPO', defaultValue: '666930281169.dkr.ecr.ap-south-1.amazonaws.com/devops', description: 'ECR Repo URI')
+    }
+
+    environment {
+        AWS_CREDENTIALS = 'DevOps'               // Jenkins credential ID for AWS IAM user
+        IMAGE_TAG = "dev-${BUILD_ID}"            // Unique image tag
+        EKS_CLUSTER_NAME = 'eks-devops-demo'     // Your EKS cluster name
+        EKS_NAMESPACE = 'prod'                 // Your Kubernetes namespace
+        REGION = 'ap-south-1'
+        KUBE_DEPLOY_FILE = 'k8s/deployment.yaml' // Path to your k8s YAML file
+    }
+
+    stages {
+
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Checkout Code') {
+            steps {
+                git(
+                    url: 'https://github.com/namdev-rathod/eks-cloudformation-jenkins-pipeline.git',
+                    credentialsId: 'namdev',
+                    branch: "${params.BRANCH_NAME}"
+                )
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh '''
+                    echo "🔧 Building Docker Image..."
+                    docker build -f frontend-app/Dockerfile -t $ECR_REPO:$IMAGE_TAG frontend-app
+                    '''
+                }
+            }
+        }
+
+        stage('Push Docker Image to ECR') {
+            steps {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                     credentialsId: "${AWS_CREDENTIALS}",
+                     accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                     secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
+                ]) {
+                    sh '''
+                    echo "🔐 Logging into ECR..."
+                    aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR_REPO
+
+                    echo "📤 Pushing Docker image to ECR..."
+                    docker push $ECR_REPO:$IMAGE_TAG
+                    '''
+                }
+            }
+        }
+
+        stage('Update Kubernetes Manifest') {
+            steps {
+                script {
+                    sh '''
+                    echo "📝 Updating Kubernetes deployment file with new image tag..."
+                    sed -i "s|image: .*|image: $ECR_REPO:$IMAGE_TAG|g" $KUBE_DEPLOY_FILE
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                     credentialsId: "${AWS_CREDENTIALS}",
+                     accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                     secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
+                ]) {
+                    sh '''
+                    echo "🔗 Connecting to EKS cluster..."
+                    aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $REGION
+
+                    echo "🚀 Deploying updated manifest to EKS..."
+                    kubectl apply -n $EKS_NAMESPACE -f $KUBE_DEPLOY_FILE
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment to EKS succeeded!"
+        }
+        failure {
+            echo "❌ Deployment failed!"
+        }
+    }
+}
