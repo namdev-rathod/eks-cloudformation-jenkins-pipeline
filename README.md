@@ -1,8 +1,4 @@
-Here’s a professional and visually appealing `README.md` for your GitHub project, written to impress visitors and explain the project clearly with emojis and sections.
-
----
-
-````markdown
+markdown
 # 🚀 EKS Cluster Setup using CloudFormation + Jenkins CI/CD Pipeline
 
 Welcome to the **EKS + Jenkins + CloudFormation** project! This repository helps you set up an **Amazon EKS Cluster** using **CloudFormation**, configure **Jenkins Declarative Pipeline** on EC2, and deploy scalable applications using **HPA** and **ALB** with AWS Load Balancer Controller.
@@ -204,9 +200,4 @@ annotations:
 
 If you found this project helpful, please ⭐ star the repository and share with others!
 
-```
-
----
-
-Would you like a matching `Jenkinsfile` and CloudFormation `eks-cluster.yaml` template to go along with the repo for completeness?
 ```
