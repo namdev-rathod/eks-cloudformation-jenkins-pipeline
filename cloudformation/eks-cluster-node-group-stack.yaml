@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: EKS Cluster Node Group For DevOps
+
+Parameters:
+  EKSClusterName:
+    Type: String
+    Default: eks-devops-cluster
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet::Id  
+  NodeGroupName:
+    Type: String
+    Description: Name of the EKS node group
+  NodeInstanceType:
+    Type: String
+    Description: EC2 instance type for the worker nodes
+    Default: t3.medium
+  DesiredCapacity:
+    Type: Number
+    Description: Desired number of worker nodes
+    Default: 1
+    MinValue: 1
+    MaxValue: 2
+  MinCapacity:
+    Type: Number
+    Description: Minimum number of worker nodes
+    Default: 1
+  MixCapacity:
+    Type: Number
+    Description: Maximum number of worker nodes
+    Default: 2    
+  Env:
+    Type: String
+    Default: dev
+
+Resources:
+  EKSNodeGroupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+      Policies:
+        - PolicyName: "NodeGroupAdditionalPolicies"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - autoscaling:DescribeAutoScalingGroups
+                  - autoscaling:DescribeAutoScalingInstances
+                  - autoscaling:DescribeLaunchConfigurations
+                  - autoscaling:DescribeTags
+                  - autoscaling:SetDesiredCapacity
+                  - autoscaling:TerminateInstanceInAutoScalingGroup
+                  - ec2:DescribeLaunchTemplateVersions
+                  - route53:ChangeResourceRecordSets
+                  - route53:ListResourceRecordSets
+                  - route53:GetHostedZone
+                  - route53:ListHostedZones
+                  - appmesh:*
+                  - elasticloadbalancing:*
+                Resource: "*"
+
+  EKSNodeGroup:  # <-- Correctly indented at same level as EKSNodeGroupRole
+    Type: AWS::EKS::Nodegroup
+    Properties:
+      ClusterName: !Ref EKSClusterName
+      NodegroupName: !Ref NodeGroupName
+      NodeRole: !GetAtt EKSNodeGroupRole.Arn
+      DiskSize: 30
+      Labels:
+        app: eks-devops-cluster
+        Name: !Ref NodeGroupName
+        Env: !Ref Env
+      Subnets:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      ScalingConfig:
+        MinSize: !Ref MinCapacity
+        MaxSize: !Ref MixCapacity
+        DesiredSize: !Ref DesiredCapacity
+      InstanceTypes: 
+        - !Ref NodeInstanceType
+      AmiType: BOTTLEROCKET_x86_64
+      RemoteAccess:
+        Ec2SshKey: DevOps-Key
+
+Outputs:
+  NodeGroupName:
+    Value: !Ref EKSNodeGroup
+    Description: The name of the EKS Node Group

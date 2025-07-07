@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: eks-devops-vpc
+
+Parameters:
+  AvailabilityZone1:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: First Availability Zone
+  AvailabilityZone2:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: Second Availability Zone
+
+Resources:
+  DevOpsVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: eks-devops-vpc
+
+  DevOpsInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: devops-igw
+
+  AttachDevOpsIGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref DevOpsVPC
+      InternetGatewayId: !Ref DevOpsInternetGateway
+
+  DevOpsPublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref DevOpsVPC
+      CidrBlock: 10.0.0.0/18
+      AvailabilityZone: !Ref AvailabilityZone1
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: DevOps-public-subnet-1
+
+  DevOpsPublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref DevOpsVPC
+      CidrBlock: 10.0.64.0/18
+      AvailabilityZone: !Ref AvailabilityZone2
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: DevOps-public-subnet-2
+
+  DevOpsPrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref DevOpsVPC
+      CidrBlock: 10.0.128.0/18
+      AvailabilityZone: !Ref AvailabilityZone1
+      Tags:
+        - Key: Name
+          Value: DevOps-private-subnet-1
+
+  DevOpsPrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref DevOpsVPC
+      CidrBlock: 10.0.192.0/18
+      AvailabilityZone: !Ref AvailabilityZone2
+      Tags:
+        - Key: Name
+          Value: DevOps-private-subnet-2
+
+  DevOpsPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref DevOpsVPC
+      Tags:
+        - Key: Name
+          Value: DevOps-public-routetable
+
+  DevOpsPublicDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachDevOpsIGW
+    Properties:
+      RouteTableId: !Ref DevOpsPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref DevOpsInternetGateway
+
+  DevOpsPublicSubnet1RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DevOpsPublicSubnet1
+      RouteTableId: !Ref DevOpsPublicRouteTable
+
+  DevOpsPublicSubnet2RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DevOpsPublicSubnet2
+      RouteTableId: !Ref DevOpsPublicRouteTable
+
+  DevOpsPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref DevOpsVPC
+      Tags:
+        - Key: Name
+          Value: DevOps-private-routetable
+
+  DevOpsPrivateSubnet1RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DevOpsPrivateSubnet1
+      RouteTableId: !Ref DevOpsPrivateRouteTable
+
+  DevOpsPrivateSubnet2RTAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DevOpsPrivateSubnet2
+      RouteTableId: !Ref DevOpsPrivateRouteTable
+
+Outputs:
+  VPCId:
+    Value: !Ref DevOpsVPC
+    Description: VPC ID
+
+  PublicSubnet1:
+    Value: !Ref DevOpsPublicSubnet1
+  PublicSubnet2:
+    Value: !Ref DevOpsPublicSubnet2
+  PrivateSubnet1:
+    Value: !Ref DevOpsPrivateSubnet1
+  PrivateSubnet2:
+    Value: !Ref DevOpsPrivateSubnet2
