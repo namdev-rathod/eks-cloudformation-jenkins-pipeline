@@ -19,3 +19,10 @@ spec:
           image: 666930281169.dkr.ecr.ap-south-1.amazonaws.com/devops:dev-1  # Updated by Jenkins
           ports:
             - containerPort: 80
+          resources:
+            requests:
+              cpu: "250m"        # 0.25 CPU
+              memory: "512Mi"    # 512 MB
+            limits:
+              cpu: "500m"        # 0.5 CPU
+              memory: "1Gi"      # 1 GB
